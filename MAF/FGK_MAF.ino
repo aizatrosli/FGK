@@ -28,7 +28,7 @@ volatile unsigned long _pulsecount = pulsecount;
 //Airflow///////////////////////////////////////////////////////////////////////////////////////////////
 volatile int RAWMAP;
 volatile double MAP;
-volatile double k = 0.005;
+volatile double K = 0.005;
 
 //----------------------------------------------------------------------------------------------------//
 //Injection thread(1)///////////////////////////////////////////////////////////////////////////////////
@@ -57,7 +57,15 @@ NIL_THREAD(Thread2, arg)
     //50% of ignition period
     injectDelayTime = ((62500/(Freq/2))-1);
     //
-    injectOnTime = ((62500*AF*30)-1); 
+    if (Freq <= 10)
+    {
+      injectOnTime = ((62500/(Freq/2))-1);
+    } 
+    else
+    {
+      injectOnTime = ((62500*AF*30)-1); 
+    }
+    
   }
 }
 //----------------------------------------------------------------------------------------------------//
@@ -92,7 +100,7 @@ sInject();
   while (TRUE) 
   {
     nilThdSleep(100);
-    RAWMAP = analogRead(pin);
+    RAWMAP = analogRead(2);
     MAP = (1/0.045)*(((MAP*5)/1023)+0.425);
   }
 }
@@ -165,7 +173,7 @@ void fireinject ()
   OCR4A = injectDelayTime;          
   TIMSK4 = bit (OCIE4A);           
   detachInterrupt (0);   
-
+}
 void fInject()
 { 
   
