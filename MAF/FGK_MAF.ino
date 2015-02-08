@@ -1,3 +1,4 @@
+//Pin assign RPM detection = pin 2 & 3, injection = pin 11, MAP = pin ?
 
 
 #include <NilRTOS.h>
@@ -6,7 +7,6 @@
 #define Serial NilSerial
 
 //Pulse injector/////////////////////////////////////////////////////////////////////////////////////////
-const byte FIRE_SENSOR = 2;
 const byte injectPLUG = 11;
 
 volatile unsigned int injectDelayTime;
@@ -25,6 +25,10 @@ volatile unsigned long previousMicros=0;
 volatile float Freq;
 volatile unsigned long _duration = duration;
 volatile unsigned long _pulsecount = pulsecount;
+//Airflow///////////////////////////////////////////////////////////////////////////////////////////////
+volatile int RAWMAP;
+volatile double MAP;
+volatile double k = 0.005;
 
 //----------------------------------------------------------------------------------------------------//
 //Injection thread(1)///////////////////////////////////////////////////////////////////////////////////
@@ -49,7 +53,7 @@ NIL_THREAD(Thread2, arg)
   {
     nilThdSleep(100);
     //Estimation AirFlow
-    AF=(1.875*Freq)/603136.0605;
+    AF=(3.75*MAP*Freq*K)/603136.0605;
     //50% of ignition period
     injectDelayTime = ((62500/(Freq/2))-1);
     //
@@ -61,7 +65,7 @@ NIL_THREAD(Thread2, arg)
 NIL_WORKING_AREA(waThread3, 64);
 NIL_THREAD(Thread3, arg) {
  
-attachInterrupt(1, myinthandler, RISING);
+attachInterrupt(1, RPMint, RISING);
   while (TRUE) 
   {
     nilThdSleep(100);
@@ -79,12 +83,27 @@ attachInterrupt(1, myinthandler, RISING);
   }
 }
 //----------------------------------------------------------------------------------------------------//
+//AirFlow Estimation thread(3)//////////////////////////////////////////////////////////////////////////
+NIL_WORKING_AREA(waThread4, 64);
+NIL_THREAD(Thread4, arg) 
+{
+sInject();
+
+  while (TRUE) 
+  {
+    nilThdSleep(100);
+    RAWMAP = analogRead(pin);
+    MAP = (1/0.045)*(((MAP*5)/1023)+0.425);
+  }
+}
+//----------------------------------------------------------------------------------------------------//
 //NilRTOS Library Initialization////////////////////////////////////////////////////////////////////////
 //----------------------------------------------------------------------------------------------------//
 NIL_THREADS_TABLE_BEGIN()
 NIL_THREADS_TABLE_ENTRY(NULL, Thread1, NULL, waThread1, sizeof(waThread1))
 NIL_THREADS_TABLE_ENTRY(NULL, Thread2, NULL, waThread2, sizeof(waThread2))
 NIL_THREADS_TABLE_ENTRY(NULL, Thread3, NULL, waThread3, sizeof(waThread3))
+NIL_THREADS_TABLE_ENTRY(NULL, Thread4, NULL, waThread4, sizeof(waThread4))
 NIL_THREADS_TABLE_END()
 //----------------------------------------------------------------------------------------------------//
 //AirFlow Estimation thread(3)//////////////////////////////////////////////////////////////////////////
@@ -158,7 +177,7 @@ void fInject()
 } 
 //----------------------------------------------------------------------------------------------------//
 //RPM counter Interrupt///////////////////////////////////////////////////////////////////////////////////
-void myinthandler() // interrupt handler
+void RPMint() // interrupt handler
 {
   NIL_IRQ_PROLOGUE();
   unsigned long currentMicros = micros();
