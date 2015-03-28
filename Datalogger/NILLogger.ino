@@ -2,7 +2,6 @@
 // target input 'A2'
 
 #include <NilRTOS.h>
-#include <NilAnalog.h>
 #include <NilSerial.h>
 #define Serial NilSerial
 
@@ -14,6 +13,7 @@ volatile unsigned int timer = 0;//counts period of wave
 volatile double period;
 volatile float frequency;
 volatile int rpm;
+volatile int val;
 //------------------------------------------------------------------------------
 // Declare a stack with 64 bytes beyond context switch and interrupt needs.
 NIL_WORKING_AREA(waThread1, 64);
@@ -27,10 +27,7 @@ NIL_THREAD(Thread1, arg) {
     nilThdSleep(100);
     
     // Dummy use of CPU - use nilThdSleep in normal app.
-    int val = analogRead(2);
-    Serial.print(val);
-    Serial.print("\t");
-    val = nilAnalogRead(2);
+    val = analogRead(2);
     Serial.print(val);
     Serial.print("\t");
   }
