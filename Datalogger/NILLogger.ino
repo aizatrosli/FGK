@@ -5,14 +5,19 @@
 #include <NilSerial.h>
 #define Serial NilSerial
 
-volatile byte newData = 0;
-volatile byte prevData = 0;
+volatile unsigned long injOn = 0;
+volatile unsigned long injOff = 0;
+volatile int lastinjState = 0;
+volatile int injState = 0;
+//RPM counter////////////////////////////////////////////////////////////////////////////////////////////
+long previousMillis = 0; // will store last time of the cycle end
+volatile unsigned long duration=0; // accumulates pulse width
+volatile unsigned int pulsecount=0;
+volatile unsigned long previousMicros=0;
+volatile float Freq;
+volatile unsigned long _duration = duration;
+volatile unsigned long _pulsecount = pulsecount;
 
-//freq variables
-volatile unsigned int timer = 0;//counts period of wave
-volatile double period;
-volatile float frequency;
-volatile int rpm;
 volatile int val;
 //------------------------------------------------------------------------------
 // Declare a stack with 64 bytes beyond context switch and interrupt needs.
@@ -38,15 +43,21 @@ NIL_WORKING_AREA(waThread2, 64);
 
 // Declare thread function for thread 2.
 NIL_THREAD(Thread2, arg) {
-srpm();
-  while (TRUE) {
-
-    // Sleep so lower priority threads can execute.
-  nilThdSleep(100);
-  frequency = 38462/period;//timer rate/period
-  rpm = (int)(frequency*60);
-  
-  Serial.println(rpm);
+attachInterrupt(1, RPMint, RISING);
+  while (TRUE) 
+  {
+    nilThdSleep(100);
+    unsigned long currentMillis = millis();
+    if (currentMillis - previousMillis >= MainPeriod) 
+        {
+          previousMillis = currentMillis;   
+          unsigned long _duration = duration;
+          unsigned long _pulsecount = pulsecount;
+          duration = 0; // clear counters
+          pulsecount = 0;
+          Freq = 1e6 / float(_duration);
+          Freq *= _pulsecount; // calculate F
+        }
   }
 }
 //------------------------------------------------------------------------------
@@ -62,7 +73,21 @@ NIL_THREAD(Thread3, arg) {
     nilThdSleep(100);
 
     // Dummy use of CPU - use nilThdSleep in normal app.
-    nilThdDelay(100);
+    injState = digitalRead(pin);
+    if (injState != lastinjState)
+    {
+
+    if (injState == HIGH)
+      {
+        Serial.print();
+        millis = injOn;
+      }
+      else
+      {
+        millis = injOff;
+      }
+    }
+    lastinjState = injState;
   }
 }
 //------------------------------------------------------------------------------
@@ -100,35 +125,12 @@ void loop() {
 }
 //------------------------------------------------------------------------------
 
-void srpm()
+void RPMint() // interrupt handler
 {
-  cli();//diable interrupts
-
-  ADCSRA = 0;
-  ADCSRB = 0;
-  
-  ADMUX |= (1 << REFS0); //set reference voltage
-  ADMUX |= (1 << ADLAR); //left align the ADC value- so we can read highest 8 bits from ADCH register only
-  ADMUX |= (1 << MUX1); //ADC2- analog 2
-  
-  ADCSRA |= (1 << ADPS2) | (1 << ADPS0); //set ADC clock with 32 prescaler- 16mHz/32=500kHz
-  ADCSRA |= (1 << ADATE); //enabble auto trigger
-  ADCSRA |= (1 << ADIE); //enable interrupts when measurement complete
-  ADCSRA |= (1 << ADEN); //enable ADC
-  ADCSRA |= (1 << ADSC); //start ADC measurements
-  
-  sei();//enable interrupts
- }
-
- ISR(ADC_vect) 
- {//when new ADC value ready
-
-  prevData = newData;//store previous value
-  newData = ADCH;//get value from A0
-  if (prevData < 127 && newData >=127){//if increasing and crossing midpoint
-    period = timer;//get period
-    timer = 0;//reset timer
-  }
-  
-  timer++;//increment timer at rate of 38.5kHz
+  NIL_IRQ_PROLOGUE();
+  unsigned long currentMicros = micros();
+  duration += currentMicros - previousMicros;
+  previousMicros = currentMicros;
+  pulsecount++;
+  NIL_IRQ_EPILOGUE();
 }
