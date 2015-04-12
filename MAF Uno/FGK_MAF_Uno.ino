@@ -29,7 +29,6 @@ volatile unsigned long _pulsecount = pulsecount;
 volatile int RAWMAP;
 volatile double MAP;
 volatile double K = 0.005;
-volatile double InjSpec = 14.3625 // (4.5/1.2)*3.83
 //Oil pump//////////////////////////////////////////////////////////////////////////////////////////////
 const byte oilPUMP = 5;
 
@@ -52,11 +51,11 @@ NIL_WORKING_AREA(waThread2, 64);
 NIL_THREAD(Thread2, arg) 
 {
 
-  while (TRUE)
+  while (TRUE) 
   {
     nilThdSleep(100);
     //Estimation AirFlow
-    AF=(3.75*MAP*Freq*K)/(InjSpec*157476.7782);
+    AF=(3.75*MAP*Freq*K)/603136.0605;
     //50% of ignition period
     injectDelayTime = ((62500/(Freq/2))-1);
     //
@@ -131,8 +130,7 @@ void loop()
 {
   //Show freq in serial monitor
   Serial.print(Freq, 4);
-  Serial.println(" Hz ");
-  Serial.println(AF, 4);
+  Serial.println("Hz");
 }
 //----------------------------------------------------------------------------------------------------//
 //Injection Interrupt///////////////////////////////////////////////////////////////////////////////////
