@@ -7,7 +7,7 @@
 #define Serial NilSerial
 
 //Pulse injector/////////////////////////////////////////////////////////////////////////////////////////
-const byte injectPLUG = 11;
+const byte injectPLUG = 4;
 
 volatile unsigned int injectDelayTime;
 volatile unsigned long injectOnTime;
@@ -29,6 +29,8 @@ volatile unsigned long _pulsecount = pulsecount;
 volatile int RAWMAP;
 volatile double MAP;
 volatile double K = 0.005;
+//Oil pump//////////////////////////////////////////////////////////////////////////////////////////////
+const byte oilPUMP = 5;
 
 //----------------------------------------------------------------------------------------------------//
 //Injection thread(1)///////////////////////////////////////////////////////////////////////////////////
@@ -57,7 +59,7 @@ NIL_THREAD(Thread2, arg)
     //50% of ignition period
     injectDelayTime = ((62500/(Freq/2))-1);
     //
-    if (Freq <= 10)
+    if (Freq <= 25)
     {
       injectOnTime = ((62500/(Freq/2))-1);
     } 
@@ -100,7 +102,7 @@ sInject();
   while (TRUE) 
   {
     nilThdSleep(100);
-    RAWMAP = analogRead(2);
+    RAWMAP = analogRead(5);
     MAP = (1/0.045)*(((MAP*5)/1023)+0.425);
   }
 }
@@ -114,10 +116,12 @@ NIL_THREADS_TABLE_ENTRY(NULL, Thread3, NULL, waThread3, sizeof(waThread3))
 NIL_THREADS_TABLE_ENTRY(NULL, Thread4, NULL, waThread4, sizeof(waThread4))
 NIL_THREADS_TABLE_END()
 //----------------------------------------------------------------------------------------------------//
-//AirFlow Estimation thread(3)//////////////////////////////////////////////////////////////////////////
+//Setup)//////////////////////////////////////////////////////////////////////////
 void setup() 
 {
   Serial.begin(9600);
+  pinMode(oilPUMP, OUTPUT);
+  digitalWrite(oilPUMP, HIGH);//Pump
   nilSysBegin();
 }
 //----------------------------------------------------------------------------------------------------//
@@ -125,7 +129,7 @@ void setup()
 void loop() 
 {
   //Show freq in serial monitor
-  Serial.print(Freq);
+  Serial.print(Freq, 4);
   Serial.println("Hz");
 }
 //----------------------------------------------------------------------------------------------------//
