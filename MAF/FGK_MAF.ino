@@ -131,7 +131,7 @@ void loop()
 {
   //Show freq in serial monitor
   Serial.print(Freq, 4);
-  Serial.println(" Hz ");
+  Serial.print(" Hz ");
   Serial.println(AF, 4);
 }
 //----------------------------------------------------------------------------------------------------//

@@ -29,6 +29,7 @@ volatile unsigned long _pulsecount = pulsecount;
 volatile int RAWMAP;
 volatile double MAP;
 volatile double K = 0.005;
+volatile double InjSpec = 14.3625 // (4.5/1.2)*3.83
 //Oil pump//////////////////////////////////////////////////////////////////////////////////////////////
 const byte oilPUMP = 5;
 
@@ -51,11 +52,11 @@ NIL_WORKING_AREA(waThread2, 64);
 NIL_THREAD(Thread2, arg) 
 {
 
-  while (TRUE) 
+  while (TRUE)
   {
     nilThdSleep(100);
     //Estimation AirFlow
-    AF=(3.75*MAP*Freq*K)/603136.0605;
+    AF=(3.75*MAP*Freq*K)/(InjSpec*157476.7782);
     //50% of ignition period
     injectDelayTime = ((62500/(Freq/2))-1);
     //
@@ -130,28 +131,29 @@ void loop()
 {
   //Show freq in serial monitor
   Serial.print(Freq, 4);
-  Serial.println("Hz");
+  Serial.println(" Hz ");
+  Serial.println(AF, 4);
 }
 //----------------------------------------------------------------------------------------------------//
 //Injection Interrupt///////////////////////////////////////////////////////////////////////////////////
 void sInject()
 {
-  TCCR4A = 0;
-  TCCR4B = 0;  
-  TIMSK4 = 0;   
+  TCCR1A = 0;
+  TCCR1B = 0;  
+  TIMSK1 = 0;   
   pinMode (injectPLUG, OUTPUT);
   attachInterrupt (0, fireinject, RISING);
 }
 
-ISR (TIMER4_COMPA_vect)
+ISR (TIMER1_COMPA_vect)
 {
 
   // if currently on, turn off
   if (injectOn)
     {
       digitalWrite (injectPLUG, LOW); 
-      TCCR4B = 0;                    
-      TIMSK4 = 0;                    
+      TCCR1B = 0;                    
+      TIMSK1 = 0;                    
       EIFR = bit (INTF0);                
       attachInterrupt (0, fireinject, RISING);   
     }
@@ -159,9 +161,9 @@ ISR (TIMER4_COMPA_vect)
     // hold-off time must be up
     {
       digitalWrite (injectPLUG, HIGH);    
-      TCCR4B = 0;                        
-      TCCR4B = bit(WGM42) | bit(CS42);   
-      OCR4A = injectOnTime;               
+      TCCR1B = 0;                        
+      TCCR1B = bit(WGM12) | bit(CS12);   
+      OCR1A = injectOnTime;               
     }
     injectOn = !injectOn;  // toggle
 
@@ -172,10 +174,10 @@ void fireinject ()
 {
   injectOn = false;                  
   // set up Timer 1
-  TCCR4A = 0;  
-  TCCR4B = bit(WGM42) | bit(CS42);  
-  OCR4A = injectDelayTime;          
-  TIMSK4 = bit (OCIE4A);           
+  TCCR1A = 0;  
+  TCCR1B = bit(WGM12) | bit(CS12);  
+  OCR1A = injectDelayTime;          
+  TIMSK1 = bit (OCIE1A);           
   detachInterrupt (0);   
 }
 void fInject()
