@@ -56,17 +56,17 @@ NIL_THREAD(Thread2, arg)
   {
     nilThdSleep(100);
     //Estimation AirFlow
-    AF=(3.75*MAP*Freq*K)/(InjSpec*157476.7782);
+    AF=(3750*MAP*Freq*K)/(InjSpec*157476.7782); //in mS
     //50% of ignition period
     injectDelayTime = ((62500/(Freq/2))-1);
     //
     if (Freq <= 25)
     {
-      injectOnTime = ((62500/(Freq/2))-1);
+      injectOnTime = ((62500/(Freq/4))-1);
     } 
     else
     {
-      injectOnTime = ((62500*AF*30)-1); 
+      injectOnTime = ((625*AF*3)-1);//conversion for timer
     }
     
   }
