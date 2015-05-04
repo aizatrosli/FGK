@@ -1,4 +1,3 @@
-//Pin assign RPM detection = pin 2 & 3, injection = pin 11, MAP = pin ?
 
 
 #include <NilRTOS.h>
@@ -33,6 +32,8 @@ volatile double InjSpec = 14.3625; // (4.5/1.2)*3.83
 //Oil pump//////////////////////////////////////////////////////////////////////////////////////////////
 const byte oilPUMP = 5;
 
+// Declare the semaphore for AF calculation/////////////////////////////////////////////////////////////
+SEMAPHORE_DECL(semAF, 0);
 //----------------------------------------------------------------------------------------------------//
 //Injection thread(1)///////////////////////////////////////////////////////////////////////////////////
 NIL_WORKING_AREA(waThread1, 64);
@@ -54,7 +55,7 @@ NIL_THREAD(Thread2, arg)
 
   while (TRUE)
   {
-    nilThdSleep(100);
+    nilSemWait(&semAF);
     //Estimation AirFlow
     AF=(3750*MAP*Freq*K)/(InjSpec*157476.7782); //in mS
     //50% of ignition period
